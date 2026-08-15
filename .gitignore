@@ -1,0 +1,9 @@
+﻿models/**/*.safetensors
+models/**/*.bin
+models/**/*.zip
+
+venv/
+__pycache__/
+*.pyc
+
+.cache/
