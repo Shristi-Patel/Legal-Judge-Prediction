@@ -1,0 +1,11 @@
+{
+  "max_len": 512,
+  "stride": 384,
+  "max_windows": 8,
+  "windows_to_average": 8,
+  "threshold": 0.39,
+  "labels": {
+    "0": "rejected",
+    "1": "accepted"
+  }
+}

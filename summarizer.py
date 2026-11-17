@@ -9,7 +9,7 @@ from transformers import pipeline, AutoTokenizer
 from case_metadata import extract_metadata, clean_boilerplate
 
 SUMMARY_MODEL_NAME = "facebook/bart-large-cnn"
-CHUNK_TOKEN_LIMIT = 900  # leave headroom under BART's 1024 limit
+CHUNK_TOKEN_LIMIT = 900 
 MIN_SUMMARY_LEN = 60
 MAX_SUMMARY_LEN = 180
 

@@ -20,6 +20,16 @@ except ImportError:
 
 st.set_page_config(page_title="Legal-J", page_icon="⚖️", layout="wide")
 
+# Full-width buttons/images: newer Streamlit uses width="stretch", older
+# versions use use_container_width=True. Pick whichever this version supports.
+import inspect
+
+_STRETCH = (
+    {"width": "stretch"}
+    if "width" in inspect.signature(st.button).parameters
+    else {"use_container_width": True}
+)
+
 # -----------------------------------------------------------------------------
 # Shared styling. Custom HTML blocks below hardcode their own colors (rather
 # than inheriting Streamlit's light/dark theme text color) so they stay
@@ -88,7 +98,7 @@ with st.sidebar:
         st.subheader("📚 Analyzed this session")
         for fname in st.session_state["analyses"]:
             is_active = fname == st.session_state["active_file"]
-            if st.button(("● " if is_active else "○ ") + fname, key=f"hist_{fname}", width="stretch"):
+            if st.button(("● " if is_active else "○ ") + fname, key=f"hist_{fname}", **_STRETCH):
                 st.session_state["active_file"] = fname
                 st.rerun()
         st.caption("This history is kept only for the current browser session.")
@@ -341,7 +351,7 @@ else:
             page_num = st.number_input(
                 "Page", min_value=1, max_value=len(pages), value=1, step=1, key=f"page_{active_file}"
             )
-            st.image(pages[page_num - 1], width="stretch")
+            st.image(pages[page_num - 1], **_STRETCH)
 
     with tab_raw:
         st.json(result)
@@ -352,7 +362,7 @@ else:
                 data=json.dumps(result, indent=2, ensure_ascii=False),
                 file_name=f"{active_file}.analysis.json",
                 mime="application/json",
-                width="stretch",
+                **_STRETCH,
             )
         with dl2:
             if _DOCX_AVAILABLE:
@@ -362,7 +372,7 @@ else:
                     data=docx_bytes,
                     file_name=f"{active_file}.report.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    width="stretch",
+                    **_STRETCH,
                 )
             else:
                 st.caption("Install `python-docx` to enable the Word report export.")

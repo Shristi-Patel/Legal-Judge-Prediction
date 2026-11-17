@@ -10,14 +10,6 @@ formatting conventions.
 import re
 from collections import Counter
 
-# ---------------------------------------------------------------------------
-# Repeated header/footer boilerplate (page numbers, neutral citation codes,
-# court short-codes stamped on every page) confuses downstream regexes by
-# gluing unrelated lines together once whitespace is collapsed. Rather than
-# hardcode this PDF's specific header format, detect it generically: any
-# short line that repeats 3+ times across the document is almost certainly
-# running header/footer noise, not case content.
-# ---------------------------------------------------------------------------
 PAGE_NUMBER_LINE_PATTERN = re.compile(r"^-?\s*\d{1,4}\s*-?$")
 
 
@@ -102,9 +94,19 @@ ACT_PATTERN = re.compile(r"[A-Z][A-Za-z,'&\s]{3,80}?\bAct,?\s*\d{4}", re.IGNOREC
 # Operative "ORDER" block — the final directions a court issues, usually a
 # standalone "ORDER" heading followed by numbered/roman-numeral clauses
 # ending near the judge's signature ("Sd/-").
+#
+# The heading is matched letter-by-letter with optional whitespace between
+# each character (\s* between O-R-D-E-R) because pdfplumber sometimes
+# extracts a bold/underlined "ORDER" heading as letter-spaced text —
+# "O R D E R" — rather than the plain word. A plain "ORDER" still matches
+# fine since \s* also accepts zero spaces. Confirmed empirically: without
+# this, the whole ORDER block match fails silently and extraction falls
+# back to the (much weaker) holding-keyword sentence scan below, which
+# only picks up whichever single clause happens to contain a matching
+# keyword instead of every numbered clause in the order.
 # ---------------------------------------------------------------------------
 ORDER_BLOCK_PATTERN = re.compile(
-    r"\n\s*ORDER\s*\n(.*?)(?:\n\s*Sd/-|\Z)", re.IGNORECASE | re.DOTALL
+    r"\n\s*O\s*R\s*D\s*E\s*R\s*\n(.*?)(?:\n\s*Sd/-|\Z)", re.IGNORECASE | re.DOTALL
 )
 ORDER_ITEM_SPLIT_PATTERN = re.compile(r"\(\s*[ivxlcdm]+\s*\)\s*", re.IGNORECASE)
 
@@ -112,11 +114,23 @@ ORDER_ITEM_SPLIT_PATTERN = re.compile(r"\(\s*[ivxlcdm]+\s*\)\s*", re.IGNORECASE)
 # Generic "holding" sentences — used as a fallback key-points source when a
 # document doesn't have a clean standalone ORDER block (e.g. some appeal
 # judgments fold the disposal into the last paragraph).
+#
+# Includes both "is/are/stands <verb>" phrasing and the bare past-participle
+# ("quashed", "allowed", ...) since courts phrase operative clauses
+# inconsistently — e.g. "are hereby quashed" doesn't contain the literal
+# substring "is quashed". The bare forms are enough on their own to catch
+# any of the "is/are/stands/hereby" variants, so the longer phrases below
+# are kept mainly for readability/intent rather than being load-bearing.
 # ---------------------------------------------------------------------------
 HOLDING_KEYWORDS = [
     "is allowed", "is dismissed", "is disposed of", "is set aside", "is quashed",
     "is directed", "are directed", "stands convicted", "stands acquitted",
     "is remitted", "is upheld", "shall be", "is liable to be",
+    "hereby quashed", "are quashed", "stands quashed",
+    "hereby allowed", "are allowed", "stands allowed",
+    "hereby dismissed", "are dismissed",
+    "hereby set aside", "are set aside",
+    "hereby directed", "hereby convicted", "hereby acquitted",
 ]
 
 # ---------------------------------------------------------------------------
@@ -360,22 +374,3 @@ def extract_metadata(text: str) -> dict:
         "estimated_reading_time_min": max(1, round(word_count / 200)),
     }
 
-
-# ---------------------------------------------------------------------------
-# NOTE on the NER upgrade path (tried and reverted):
-# opennyaiorg/en_legal_ner_sm (and its _trf variant) were evaluated as a
-# fallback for cases this regex-based approach misses. Both pin
-# spacy<3.3.0, which depends on thinc/blis versions from ~2021 that fail to
-# compile on modern Python (3.13) and Cython — this is a real, unresolved
-# incompatibility in the upstream package, not a local environment issue.
-# If revisiting this later, look for an actively maintained alternative
-# rather than retrying this specific package.
-#
-# Update: rather than re-attempt a spaCy-based swap, this round widened the
-# rule-based AREA_OF_LAW_KEYWORDS buckets (banking, societies, writ/
-# constitutional, family, labour, land acquisition, arbitration, service,
-# bail) instead. A transformers-based (non-spaCy) legal NER model would
-# sidestep the dependency conflict above and is the more promising next
-# step if the keyword approach starts missing too much — just budget time
-# to download/validate it since none is wired up or tested here yet.
-# ---------------------------------------------------------------------------

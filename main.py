@@ -13,12 +13,6 @@ from summarizer import load_summarizer, summarize_text
 
 app = FastAPI(title="Legal-J API", version="1.1.0")
 
-# ---------------------------------------------------------------------------
-# CORS. Defaults to "*" so local frontend dev (Streamlit on a different port)
-# works out of the box. Before deploying publicly, set ALLOWED_ORIGINS to a
-# comma-separated allowlist, e.g.:
-#   ALLOWED_ORIGINS="https://your-frontend.example.com" uvicorn main:app
-# ---------------------------------------------------------------------------
 _allowed_origins_env = os.environ.get("ALLOWED_ORIGINS", "*")
 ALLOWED_ORIGINS = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]
 
@@ -29,13 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------------------------------
-# Optional HTTP Basic Auth. Off by default (nothing to configure for local
-# dev). Set both env vars to require a username/password on every request:
-#   LEGALJ_AUTH_USER=admin LEGALJ_AUTH_PASS=change-me uvicorn main:app
-# This is a minimal deterrent, not a full auth system — put a real reverse
-# proxy / auth layer in front for anything beyond casual protection.
-# ---------------------------------------------------------------------------
 _AUTH_USER = os.environ.get("LEGALJ_AUTH_USER")
 _AUTH_PASS = os.environ.get("LEGALJ_AUTH_PASS")
 _AUTH_ENABLED = bool(_AUTH_USER and _AUTH_PASS)
@@ -54,12 +41,6 @@ def require_auth(credentials: HTTPBasicCredentials = Depends(_security)):
         )
 
 
-# ---------------------------------------------------------------------------
-# Request size limit. Rejects oversized uploads before they're read into
-# memory (a request with no Content-Length, e.g. chunked transfer, is let
-# through this check and still bounded downstream by MAX_OCR_PAGES / model
-# truncation, but this catches the common case cheaply).
-# ---------------------------------------------------------------------------
 MAX_UPLOAD_MB = float(os.environ.get("MAX_UPLOAD_MB", "25"))
 
 
